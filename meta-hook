@@ -1,0 +1,66 @@
+#!/bin/bash
+
+#
+# Meta-Hook
+#
+# This script is sourced by individual meta-hook scripts.
+# `find_scripts` searches parent directories of changed files, finds hooks,
+#   and extracts them for execution.
+# Each meta-hook script calls those hooks with the hook-appropriate inputs,
+#   *except that the first argument is the original script path*.
+#
+
+set -e
+set -o pipefail
+
+# temporary directory for extracted scripts
+scriptdir=$(mktemp -d)
+cleanup() {
+  [[ "$scriptdir" == /tmp/* ]] && rm -rf "$scriptdir"
+}
+trap cleanup EXIT
+
+# we're going to need a named FIFO
+gitobjs=$scriptdir/gitobjs
+mkfifo $gitobjs
+
+# we're only going to run scripts from the current semester
+semester=$(
+  date +%b%y |
+  sed -e 's/Aug\|Sep\|Oct\|Nov\|Dec/fall/' -e 's/Jan\|Feb\|Mar\|Apr\|May/spring/'
+)
+
+# find and extract hook scripts
+# input variables (in addition to variables defined above)
+#   $target target script path
+#   $refname updated ref
+#   $oldrev old revision
+#   $newrev new revision
+# output lines
+#   <executable file> <original script name>
+find_scripts() {
+  git diff --name-only "$oldrev" "$newrev" | # changed filenames
+  xargs dirname |                            # changed directories
+  (grep ^$semester || true) |                # only current semester
+  sort | uniq |                              # de-duplicate
+  while read dir; do                         # for each directory...
+    while [[ $dir != '.' ]]; do              # ... generate all parents
+      echo $dir/; dir=$(dirname $dir)        # (with trailing slashes)
+    done
+  done |
+  sort | uniq |                              # de-duplicate
+  (echo && cat) |                            # add blank line for root
+  sed -e "s!.*!&$target!" |                  # names of candidate scripts
+  tee >(
+    sed -e "s!.*!$refname:&!" |              # object names of candidates
+    git cat-file --batch-check > $gitobjs    # get object SHAs if they exist
+  ) |
+  paste - $gitobjs |                         # ... glue together results
+  (grep blob || true) |                      # take only existing scripts
+  while read script oid etc; do              # for each script...
+    executable=$(mktemp --tmpdir=$scriptdir)
+    git show $oid > $executable              # extract to file
+    chmod +x $executable                     # executable file
+    echo $executable $script                 # output file & script name
+  done
+}

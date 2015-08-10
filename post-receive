@@ -1,0 +1,26 @@
+#!/bin/bash
+
+#
+# Post-Receive Meta-Hook
+#
+
+target=scripts/repo-post-receive-hook
+
+# be helpful to someone debugging this script
+if [ -z "$GIT_DIR" ]; then
+  echo "Usage: echo <oldrev> <newrev> <branch> | GIT_DIR=<dir> $0"
+  exit 1
+fi
+
+source $(dirname $0)/meta-hook
+
+updated=$(mktemp --tmpdir=$scriptdir)
+
+# this hook is executed with a list of updated refs on stdin
+tee $updated | while read -r oldrev newrev refname; do
+  find_scripts | while read executable script; do
+    echo -e "\e[1;36m[post-receive]\e[0m $script"
+    # run the script: pass updated refs on stdin
+    $executable $script < $updated
+  done
+done

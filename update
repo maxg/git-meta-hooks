@@ -1,0 +1,26 @@
+#!/bin/bash
+
+#
+# Update Meta-Hook
+#
+
+target=scripts/repo-update-hook
+
+# this hook is executed once for each updated ref
+refname="$1"
+oldrev="$2"
+newrev="$3"
+
+# be helpful to someone debugging this script
+if [ -z "$GIT_DIR" -o -z "$oldrev" -o -z "$newrev" ]; then
+    echo "Usage: GIT_DIR=<dir> $0 <ref> <oldrev> <newrev>"
+    exit 1
+fi
+
+source $(dirname $0)/meta-hook
+
+find_scripts | while read executable script; do
+  echo -e "\e[1;35m[update]\e[0m $script"
+  # run the script: pass updated ref args, exit on failure
+  $executable $script "$@" || exit
+done
