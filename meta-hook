@@ -39,28 +39,28 @@ semester=$(
 # output lines
 #   <executable file> <original script name>
 find_scripts() {
-  git diff --name-only "$oldrev" "$newrev" | # changed filenames
-  xargs dirname |                            # changed directories
-  (grep ^$semester || true) |                # only current semester
-  sort | uniq |                              # de-duplicate
-  while read dir; do                         # for each directory...
-    while [[ $dir != '.' ]]; do              # ... generate all parents
-      echo $dir/; dir=$(dirname $dir)        # (with trailing slashes)
+  git diff --name-only -z "$oldrev" "$newrev" | # changed filenames
+  xargs -0 dirname |                            # changed directories
+  (grep ^$semester || true) |                   # only current semester
+  sort | uniq |                                 # de-duplicate
+  while read dir; do                            # for each directory...
+    while [[ $dir != '.' ]]; do                 # ... generate all parents
+      echo $dir/; dir=$(dirname $dir)           # (with trailing slashes)
     done
   done |
-  sort | uniq |                              # de-duplicate
-  (echo && cat) |                            # add blank line for root
-  sed -e "s!.*!&$target!" |                  # names of candidate scripts
+  sort | uniq |                                 # de-duplicate
+  (echo && cat) |                               # add blank line for root
+  sed -e "s!.*!&$target!" |                     # names of candidate scripts
   tee >(
-    sed -e "s!.*!$refname:&!" |              # object names of candidates
-    git cat-file --batch-check > $gitobjs    # get object SHAs if they exist
+    sed -e "s!.*!$refname:&!" |                 # object names of candidates
+    git cat-file --batch-check > $gitobjs       # get object SHAs if they exist
   ) |
-  paste - $gitobjs |                         # ... glue together results
-  (grep blob || true) |                      # take only existing scripts
-  while read script oid etc; do              # for each script...
+  paste - $gitobjs |                            # ... glue together results
+  (grep blob || true) |                         # take only existing scripts
+  while read script oid etc; do                 # for each script...
     executable=$(mktemp --tmpdir=$scriptdir)
-    git show $oid > $executable              # extract to file
-    chmod +x $executable                     # executable file
-    echo $executable $script                 # output file & script name
+    git show $oid > $executable                 # extract to file
+    chmod +x $executable                        # executable file
+    echo $executable $script                    # output file & script name
   done
 }
