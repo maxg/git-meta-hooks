@@ -14,15 +14,15 @@ set -e
 set -o pipefail
 
 # temporary directory for extracted scripts
-scriptdir=$(mktemp -d)
+scriptdir="$(mktemp -d)"
 cleanup() {
   [[ "$scriptdir" == /tmp/* ]] && rm -rf "$scriptdir"
 }
 trap cleanup EXIT
 
 # we're going to need a named FIFO
-gitobjs=$scriptdir/gitobjs
-mkfifo $gitobjs
+gitobjs="$scriptdir/gitobjs"
+mkfifo "$gitobjs"
 
 # we're only going to run scripts from the current semester
 semester=$(
@@ -41,11 +41,11 @@ semester=$(
 find_scripts() {
   git diff --name-only -z "$oldrev" "$newrev" | # changed filenames
   xargs -0 dirname |                            # changed directories
-  (grep ^$semester || true) |                   # only current semester
+  (grep "^$semester" || true) |                 # only current semester
   sort | uniq |                                 # de-duplicate
-  while read dir; do                            # for each directory...
-    while [[ $dir != '.' ]]; do                 # ... generate all parents
-      echo $dir/; dir=$(dirname $dir)           # (with trailing slashes)
+  while read -r dir; do                         # for each directory...
+    while [[ "$dir" != '.' ]]; do               # ... generate all parents
+      echo "$dir/"; dir="$(dirname "$dir")"     # (with trailing slashes)
     done
   done |
   sort | uniq |                                 # de-duplicate
@@ -53,14 +53,14 @@ find_scripts() {
   sed -e "s!.*!&$target!" |                     # names of candidate scripts
   tee >(
     sed -e "s!.*!$refname:&!" |                 # object names of candidates
-    git cat-file --batch-check > $gitobjs       # get object SHAs if they exist
+    git cat-file --batch-check > "$gitobjs"     # get object SHAs if they exist
   ) |
-  paste - $gitobjs |                            # ... glue together results
+  paste - "$gitobjs" |                          # ... glue together results
   (grep blob || true) |                         # take only existing scripts
-  while read script oid etc; do                 # for each script...
-    executable=$(mktemp --tmpdir=$scriptdir)
-    git show $oid > $executable                 # extract to file
-    chmod +x $executable                        # executable file
-    echo $executable $script                    # output file & script name
+  while read -r script oid etc; do              # for each script...
+    executable="$(mktemp --tmpdir="$scriptdir")"
+    git show "$oid" > "$executable"             # extract to file
+    chmod +x "$executable"                      # executable file
+    echo "$executable" "$script"                # output file & script name
   done
 }

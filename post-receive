@@ -12,15 +12,15 @@ if [ -z "$GIT_DIR" ]; then
   exit 1
 fi
 
-source $(dirname $0)/meta-hook
+source "$(dirname "$0")/meta-hook"
 
-updated=$(mktemp --tmpdir=$scriptdir)
+updated="$(mktemp --tmpdir="$scriptdir")"
 
 # this hook is executed with a list of updated refs on stdin
-tee $updated | while read -r oldrev newrev refname; do
-  find_scripts | while read executable script; do
+tee "$updated" | while read -r oldrev newrev refname; do
+  find_scripts | while read -r executable script; do
     echo -e "\e[1;36m[post-receive]\e[0m $script"
     # run the script: pass updated refs on stdin
-    $executable $script < $updated
+    "$executable" "$script" < "$updated"
   done
 done

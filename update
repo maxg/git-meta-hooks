@@ -17,10 +17,10 @@ if [ -z "$GIT_DIR" -o -z "$oldrev" -o -z "$newrev" ]; then
     exit 1
 fi
 
-source $(dirname $0)/meta-hook
+source "$(dirname "$0")/meta-hook"
 
-find_scripts | while read executable script; do
+find_scripts | while read -r executable script; do
   echo -e "\e[1;35m[update]\e[0m $script"
   # run the script: pass updated ref args, exit on failure
-  $executable $script "$@" || exit
+  "$executable" "$script" "$@" || exit
 done
