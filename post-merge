@@ -1,0 +1,26 @@
+#!/bin/bash
+
+#
+# Post-Merge Meta-Hook
+#
+
+target=scripts/repo-post-merge-hook
+
+# this hook is executed by `git merge`, which sets ORIG_HEAD
+refname="$(git rev-parse --symbolic-full-name HEAD)"
+oldrev="$(git rev-parse --verify ORIG_HEAD)"
+newrev="$(git rev-parse --verify HEAD)"
+
+# be helpful to someone debugging this script
+if [ -z "$GIT_DIR" -o -z "$GIT_WORK_TREE" ]; then
+  echo "Usage: <set ORIG_HEAD and HEAD> ; GIT_DIR=<dir> GIT_WORK_TREE=<dir> $0"
+  exit 1
+fi
+
+source "$(dirname "$0")/meta-hook"
+
+find_scripts | while read -r executable script; do
+  echo -e "\e[1;36m[post-merge]\e[0m $script"
+  # run the script: pass old and new HEAD, exit on failure
+  "$executable" "$script" "$refname" "$oldrev" "$newrev" || exit
+done
