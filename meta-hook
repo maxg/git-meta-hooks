@@ -30,6 +30,9 @@ semester=$(
   sed -e 's/Aug\|Sep\|Oct\|Nov\|Dec/fall/' -e 's/Jan\|Feb\|Mar\|Apr\|May/spring/'
 )
 
+zerosha='0000000000000000000000000000000000000000'
+emptysha='4b825dc642cb6eb9a060e54bf8d69288fbee4904'
+
 # find and extract hook scripts
 # input variables (in addition to variables defined above)
 #   $target target script path
@@ -39,7 +42,8 @@ semester=$(
 # output lines
 #   <executable file> <original script name>
 find_scripts() {
-  git diff --name-only -z "$oldrev" "$newrev" | # changed filenames
+  oldsha="${oldrev/$zerosha/$emptysha}"         # handle initial commit
+  git diff --name-only -z "$oldsha" "$newrev" | # changed filenames
   xargs -0 dirname |                            # changed directories
   (grep "^$semester" || true) |                 # only current semester
   sort | uniq |                                 # de-duplicate
