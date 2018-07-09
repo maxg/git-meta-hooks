@@ -55,6 +55,10 @@ find_scripts() {
   sort | uniq |                                 # de-duplicate
   (echo && cat) |                               # add blank line for root
   sed -e "s!.*!&$target!" |                     # names of candidate scripts
+  while read -r script; do                      # for each script...
+    echo "$script"                              # ... include both script file
+    git ls-tree --name-only "$refname" "${script}s/"
+  done |                                        # ... and directory of scripts
   tee >(
     sed -e "s!.*!$refname:&!" |                 # object names of candidates
     git cat-file --batch-check > "$gitobjs"     # get object SHAs if they exist
