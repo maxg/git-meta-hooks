@@ -57,8 +57,10 @@ find_scripts() {
   sed -e "s!.*!&$target!" |                     # names of candidate scripts
   while read -r script; do                      # for each script...
     echo "$script"                              # ... include both script file
-    git ls-tree --name-only "$refname" "${script}s/"
-  done |                                        # ... and directory of scripts
+    if [ "$oldrev" != "$zerosha" ]; then
+      git ls-tree --name-only "$refname" "${script}s/"
+    fi                                          # ... and directory of scripts
+  done |
   tee >(
     sed -e "s!.*!$refname:&!" |                 # object names of candidates
     git cat-file --batch-check > "$gitobjs"     # get object SHAs if they exist
